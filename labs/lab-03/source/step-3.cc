@@ -54,17 +54,72 @@ Step3::Step3()
 void
 Step3::make_grid()
 {
-  GridGenerator::hyper_cube(triangulation, -1, 1);
-  triangulation.begin_active()->face(0)->set_boundary_id(-0.5);
+  /**
+   * @brief Hyper cube generation
+   */
+
+  // GridGenerator::hyper_cube(triangulation, -1, 1);
   
+  /**
+   * @brief First way to apply the Bc conditions 
+   */
+  // triangulation.begin_active()->face(0)->set_boundary_id(-0.5);
+
+  /**
+   * @brief Second way to apply the Bc conditions 
+   */
   // for (auto &face : triangulation.active_face_iterators())
   //   if (std::fabs(face->center()(1) - (-1.0)) < 1e-12 ||
   //       std::fabs(face->center()(1) - (1.0)) < 1e-12)
   //     face->set_boundary_id(-0.5);
 
-  triangulation.refine_global(5);
+  // triangulation.refine_global(5);
+
+  /**
+   * @brief Hyper L generation 
+   * 
+   */
+
+  const Point<2> corner(0, 0);
+
+  GridGenerator::hyper_L(triangulation, -1, 1, false);
+
+  for (unsigned int step = 0; step < 5; ++step)
+  {
+
+    for (auto &cell : triangulation.active_cell_iterators())
+      {
+        for (const auto v : cell->vertex_indices())
+          {
+            const double distance_from_center =
+              corner.distance(cell->vertex(v));
+
+            if (std::fabs(distance_from_center) <=2/3)
+              {
+                cell->set_refine_flag();
+                break;
+              }
+          }
+      }
+
+    triangulation.execute_coarsening_and_refinement();
+  }
   std::cout << "Number of active cells: " << triangulation.n_active_cells()
             << std::endl;
+
+  for (auto &face : triangulation.active_face_iterators())
+    {
+      for(const auto v :face->vertex_indices()){
+          if(face->vertex(v)==corner && face->at_boundary()==true)
+          {
+            face->set_boundary_id(200);
+            break;
+          }
+      }
+    }
+  // if (std::fabs(face->center()(0) - corner(0)) > 0.8 || std::fabs(face->center()(1) - corner(1)) > 0.8)
+  //   face->set_boundary_id(1);
+  
 }
 
 
@@ -109,10 +164,10 @@ Step3::assemble_system()
                 (fe_values.shape_grad(i, q_index) * // grad phi_i(x_q)
                  fe_values.shape_grad(j, q_index) * // grad phi_j(x_q)
                  fe_values.JxW(q_index));           // dx
-          // for (const unsigned int i : fe_values.dof_indices())
-          //   cell_rhs(i) += (fe_values.shape_value(i, q_index) * // phi_i(x_q)
-          //                   1. *                                // f(x_q)
-          //                   fe_values.JxW(q_index));            // dx
+          for (const unsigned int i : fe_values.dof_indices())
+            cell_rhs(i) += (fe_values.shape_value(i, q_index) * // phi_i(x_q)
+                            1. *                                // f(x_q)
+                            fe_values.JxW(q_index));            // dx
         }
       cell->get_dof_indices(local_dof_indices);
       for (const unsigned int i : fe_values.dof_indices())
