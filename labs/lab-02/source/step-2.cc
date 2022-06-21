@@ -38,12 +38,16 @@ using namespace dealii;
 
 
 void
-make_grid(Triangulation<2> &triangulation)
+make_grid(Triangulation<2> &triangulation, const int input)
 {
+
+  if(input==1){
+    GridGenerator::hyper_cube(triangulation);
+    triangulation.refine_global(3);
+  }else{
   const Point<2> center(1, 0);
   const double   inner_radius = 0.5, outer_radius = 1.0;
-  GridGenerator::hyper_shell(
-    triangulation, center, inner_radius, outer_radius, 5);
+  GridGenerator::hyper_shell(triangulation, center, inner_radius, outer_radius, 5);
 
   static const SphericalManifold<2> manifold_description(center);
   triangulation.set_all_manifold_ids(0);
@@ -70,13 +74,15 @@ make_grid(Triangulation<2> &triangulation)
 
       triangulation.execute_coarsening_and_refinement();
     }
+  }
 }
 
 
 void
-distribute_dofs(DoFHandler<2> &dof_handler)
+distribute_dofs(DoFHandler<2> &dof_handler, const int n)
 {
-  static const FE_Q<2> finite_element(1);
+
+  const FE_Q<2> finite_element(n);
   dof_handler.distribute_dofs(finite_element);
 
   DynamicSparsityPattern dynamic_sparsity_pattern(dof_handler.n_dofs(),
@@ -87,38 +93,83 @@ distribute_dofs(DoFHandler<2> &dof_handler)
   SparsityPattern sparsity_pattern;
   sparsity_pattern.copy_from(dynamic_sparsity_pattern);
 
-  std::ofstream out("sparsity_pattern1.svg");
+  std::cout<<"Elements in row 42 \n";
+  for(auto i=sparsity_pattern.begin(42);i<sparsity_pattern.end(42);++i){
+    std::cout<<i->column()<<" ";
+  }
+  std::cout<<"\n";
+
+  
+
+  std::cout<<" Before to redistribuite  "<<std::endl;
+  std::cout<<"Number of total non zero elements " <<sparsity_pattern.n_nonzero_elements()<<
+              " \n Max entries per row "<< sparsity_pattern.max_entries_per_row()<<
+              " \n Estimated Memory consuption "<<sparsity_pattern.memory_consumption()<<
+              " \n Bandwidth "<<sparsity_pattern.bandwidth()<<std::endl;
+
+  std::ofstream out("sparsity_pattern1_poly"+std::to_string(n)+".svg");
   sparsity_pattern.print_svg(out);
 }
 
 
 
 void
-renumber_dofs(DoFHandler<2> &dof_handler)
+renumber_dofs(DoFHandler<2> &dof_handler, int n)
 {
   DoFRenumbering::Cuthill_McKee(dof_handler);
 
   DynamicSparsityPattern dynamic_sparsity_pattern(dof_handler.n_dofs(),
                                                   dof_handler.n_dofs());
+
   DoFTools::make_sparsity_pattern(dof_handler, dynamic_sparsity_pattern);
 
   SparsityPattern sparsity_pattern;
   sparsity_pattern.copy_from(dynamic_sparsity_pattern);
 
-  std::ofstream out("sparsity_pattern2.svg");
+  std::cout<<" After to redistribuite  "<<std::endl;
+  std::cout<<"Number of total non zero elements " <<sparsity_pattern.n_nonzero_elements()<<
+              " \n Max entries per row "<< sparsity_pattern.max_entries_per_row()<<
+              " \n Estimated Memory consuption "<<sparsity_pattern.memory_consumption()<<
+              " \n Bandwidth "<<sparsity_pattern.bandwidth()<<std::endl;
+
+  std::ofstream out("sparsity_pattern2_poly"+std::to_string(n)+".svg");
   sparsity_pattern.print_svg(out);
 }
 
 
 
-int
-main()
+int main(int argc, char *argv[])
 {
+  int input=0;
+  if(argc==1){
+    std::cout<<"Default triangulation id Hyper_cell\n run with input argument 1 to execute hyper cube triangulation \n";
+  }else if(std::stoi(argv[1])==1){
+    input=1;
+  }
+
   Triangulation<2> triangulation;
-  make_grid(triangulation);
+  make_grid(triangulation, input);
 
+  std::cout<< "LINEAR ELEMENT \n";
+  //Linear Element  
   DoFHandler<2> dof_handler(triangulation);
+  distribute_dofs(dof_handler,1);
+  renumber_dofs(dof_handler,1);
 
-  distribute_dofs(dof_handler);
-  renumber_dofs(dof_handler);
+  std::cout<<"\n";
+
+  std::cout<< "QUADRATIC ELEMENT \n";
+  //Quadratic Element
+  DoFHandler<2> dof_handler2(triangulation);
+  distribute_dofs(dof_handler2,2);
+  renumber_dofs(dof_handler2,2);
+  std::cout<<"\n";
+
+  std::cout<< "CUBIC ELEMENT \n";
+  //Cubic Element 
+  DoFHandler<2> dof_handler3(triangulation);
+  distribute_dofs(dof_handler3,3);
+  renumber_dofs(dof_handler3,3);
+  std::cout<<"\n";
+
 }

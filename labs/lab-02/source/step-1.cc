@@ -55,6 +55,8 @@ first_grid(Triangulation<2> &triangulation)
     grid_out.write_vtk(triangulation, out);
     std::cout << "Grid written to grid-1.vtk" << std::endl;
   }
+
+
 }
 
 
@@ -101,29 +103,81 @@ second_grid(Triangulation<2> &triangulation)
 // twist: refine all cells with the distance between the center of the cell and
 // re-entrant corner is smaller than 1/3.
 void
-third_grid(Triangulation<2> &)
+third_grid(Triangulation<2> & triangulation)
 {
-  // Insert code here
+
+  const Point<2> corner(0, 0);
+
+  GridGenerator::hyper_L(triangulation, -1, 1, false);
+
+  for (unsigned int step = 0; step < 3; ++step)
+    {
+      std::ofstream out("grid-3-" + std::to_string(step) + ".vtk");
+      GridOut       grid_out;
+      grid_out.write_vtk(triangulation, out);
+
+      for (auto &cell : triangulation.active_cell_iterators())
+        {
+          for (const auto v : cell->vertex_indices())
+            {
+              const double distance_from_center =
+                corner.distance(cell->vertex(v));
+
+              if (std::fabs(distance_from_center) <=2/3)
+                {
+                  cell->set_refine_flag();
+                  break;
+                }
+            }
+        }
+
+      triangulation.execute_coarsening_and_refinement();
+    }
+
+}
+
+
+//BONUS
+void
+four_grid(Triangulation<2,3> & triangulation)
+{
+
+  const double   R = 1.0, r = 0.5, phi=2.0*numbers::PI;
+  const unsigned int n_cells_toroidal= 100;
+
+  GridGenerator::torus(triangulation, R, r, n_cells_toroidal, phi);
+
+  triangulation.refine_global(2);
+
+
+  std::ofstream out("grid-4.vtk");
+  GridOut       grid_out;
+  grid_out.write_vtk(triangulation, out);
+  std::cout << "Grid written to grid-4.vtk" << std::endl;
+
 }
 
 //! Returns a tuple with number of levels, number of cells, number of active
 // cells. Test this with all of  your meshes.
 std::tuple<unsigned int, unsigned int, unsigned int>
-get_info(const Triangulation<2> &)
+get_info(const Triangulation<2> &triangulation)
 {
   // Insert code here
-  return std::make_tuple(0, 0, 0);
+  return std::make_tuple(triangulation.n_lines(),triangulation.n_cells(),triangulation.n_active_cells());
 }
 
 int
 main()
 {
-  {
-    Triangulation<2> triangulation;
-    first_grid(triangulation);
-  }
-  {
-    Triangulation<2> triangulation;
-    second_grid(triangulation);
-  }
+
+  Triangulation<2> triangulation;
+  first_grid(triangulation);
+  triangulation.clear();
+  second_grid(triangulation);
+  triangulation.clear();
+  third_grid(triangulation);
+  Triangulation<2,3> triangulation2;
+  four_grid(triangulation2);
+
+
 }
