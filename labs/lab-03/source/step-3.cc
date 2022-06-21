@@ -55,11 +55,13 @@ void
 Step3::make_grid()
 {
   GridGenerator::hyper_cube(triangulation, -1, 1);
-  // triangulation.begin_active()->face(0)->set_boundary_id(-0.5);
-  for (auto &face : triangulation.active_face_iterators())
-    if (std::fabs(face->center()(1) - (-1.0)) < 1e-12 ||
-        std::fabs(face->center()(1) - (1.0)) < 1e-12)
-      face->set_boundary_id(-0.5);
+  triangulation.begin_active()->face(0)->set_boundary_id(-0.5);
+  
+  // for (auto &face : triangulation.active_face_iterators())
+  //   if (std::fabs(face->center()(1) - (-1.0)) < 1e-12 ||
+  //       std::fabs(face->center()(1) - (1.0)) < 1e-12)
+  //     face->set_boundary_id(-0.5);
+
   triangulation.refine_global(5);
   std::cout << "Number of active cells: " << triangulation.n_active_cells()
             << std::endl;
@@ -107,10 +109,10 @@ Step3::assemble_system()
                 (fe_values.shape_grad(i, q_index) * // grad phi_i(x_q)
                  fe_values.shape_grad(j, q_index) * // grad phi_j(x_q)
                  fe_values.JxW(q_index));           // dx
-          for (const unsigned int i : fe_values.dof_indices())
-            cell_rhs(i) += (fe_values.shape_value(i, q_index) * // phi_i(x_q)
-                            1. *                                // f(x_q)
-                            fe_values.JxW(q_index));            // dx
+          // for (const unsigned int i : fe_values.dof_indices())
+          //   cell_rhs(i) += (fe_values.shape_value(i, q_index) * // phi_i(x_q)
+          //                   1. *                                // f(x_q)
+          //                   fe_values.JxW(q_index));            // dx
         }
       cell->get_dof_indices(local_dof_indices);
       for (const unsigned int i : fe_values.dof_indices())
