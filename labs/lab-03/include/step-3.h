@@ -31,11 +31,14 @@
 #include <deal.II/lac/sparse_matrix.h>
 #include <deal.II/lac/vector.h>
 
+#include <deal.II/base/parameter_acceptor.h>
+
+
 // Forward declare the tester class
 class Step3Tester;
 
 using namespace dealii;
-class Step3
+class Step3 : public ParameterAcceptor
 {
 public:
   Step3();
@@ -61,6 +64,17 @@ protected:
   SparseMatrix<double> system_matrix;
   Vector<double>       solution;
   Vector<double>       system_rhs;
+
+  //parameter
+  unsigned int global_refinements=1;
+  std::string rhs_expression ="0";
+
+  /*
+    std::unique_ptr<FunctionParse<2>> rhs;
+    std::unique_ptr<FunctionParse<2>> exact;
+    in file .cc 
+    rhs=std::make_unique<FunctionParse<2>>:(rhs_expression);
+  */
 
   friend class Step3Tester;
 };

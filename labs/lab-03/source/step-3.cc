@@ -36,6 +36,7 @@
 #include <deal.II/numerics/matrix_tools.h>
 #include <deal.II/numerics/vector_tools.h>
 
+#include <deal.II/base/parameter_handler.h>
 
 
 #include <fstream>
@@ -45,9 +46,35 @@
 using namespace dealii;
 
 Step3::Step3()
-  : fe(1)
+  : ParameterAcceptor("/")
+  ,fe(1)
   , dof_handler(triangulation)
-{}
+{
+  // ParameterHandler prm;
+  /*
+  prm.declare_entry("Number of global refinements ","1",Patterns::Integer(0));
+  prm.declare_entry("Rhs expression","0",Patterns::Anything());
+  prm.parse_input("poisson-prm");
+
+  global_refinements=prm.get_integer("Number of global refinements");
+  rhs_expression=prm.get("Rhs expression");
+  */
+
+  // Option2 
+  this-> add_parameter("Number of global refinements",global_refinements,
+  "Choose how many times to refine globally the grid before computation",
+  this->prm,Patterns::Integer(0));
+
+  this-> add_parameter("Rhs_expression",rhs_expression);
+
+  // this-> add_parameter("Exact solution",exact_solution_expression);
+
+  //if you want to read a list of point 
+  // this->add_parameter("Some points",some_points);
+  // this->add_parameter("Some constants",constants);
+  
+
+}
 
 
 
@@ -84,6 +111,17 @@ Step3::make_grid()
 
   GridGenerator::hyper_L(triangulation, -1, 1, false);
 
+  for (auto &face : triangulation.active_face_iterators())
+    {
+      for(const auto v :face->vertex_indices()){
+          if(face->vertex(v)==corner && face->at_boundary()==true)
+          {
+            face->set_boundary_id(1);
+            break;
+          }
+      }
+    }
+
   for (unsigned int step = 0; step < 5; ++step)
   {
 
@@ -107,18 +145,6 @@ Step3::make_grid()
   std::cout << "Number of active cells: " << triangulation.n_active_cells()
             << std::endl;
 
-  for (auto &face : triangulation.active_face_iterators())
-    {
-      for(const auto v :face->vertex_indices()){
-          if(face->vertex(v)==corner && face->at_boundary()==true)
-          {
-            face->set_boundary_id(200);
-            break;
-          }
-      }
-    }
-  // if (std::fabs(face->center()(0) - corner(0)) > 0.8 || std::fabs(face->center()(1) - corner(1)) > 0.8)
-  //   face->set_boundary_id(1);
   
 }
 
@@ -210,6 +236,14 @@ Step3::output_results() const
   data_out.build_patches();
   std::ofstream output("solution.vtk");
   data_out.write_vtk(output);
+
+  std::cout << "Mean value: "
+          << VectorTools::compute_mean_value (dof_handler,
+                                              QGauss<2>(fe.degree + 1),
+                                              solution,
+                                              0)
+          << std::endl;
+
 }
 
 

@@ -23,6 +23,9 @@
 #define poisson_include_file
 
 #include <deal.II/base/function.h>
+#include <deal.II/base/function_parser.h>
+#include <deal.II/base/parameter_acceptor.h>
+
 #include <deal.II/base/quadrature_lib.h>
 
 #include <deal.II/dofs/dof_handler.h>
@@ -45,19 +48,28 @@
 #include <deal.II/numerics/matrix_tools.h>
 #include <deal.II/numerics/vector_tools.h>
 
+#include <deal.II/base/parsed_convergence_table.h>
+
+
 #include <fstream>
 #include <iostream>
 
 // Forward declare the tester class
-class PoissonTester;
+// class PoissonTester;
 
 using namespace dealii;
-class Poisson
+
+template <int dim>
+class Poisson : public ParameterAcceptor
 {
 public:
   Poisson();
   void
   run();
+  void 
+  initialize(const std::string &);
+  void
+  parse_string(const std::string &);
 
 protected:
   void
@@ -69,16 +81,39 @@ protected:
   void
   solve();
   void
-  output_results() const;
+  output_results(const unsigned ) const;
 
-  Triangulation<2>     triangulation;
-  FE_Q<2>              fe;
-  DoFHandler<2>        dof_handler;
+
+  Triangulation<dim>   triangulation;
+  FE_Q<dim>            fe;
+  DoFHandler<dim>      dof_handler;
   SparsityPattern      sparsity_pattern;
   SparseMatrix<double> system_matrix;
   Vector<double>       solution;
   Vector<double>       system_rhs;
 
+  //parameter
+  unsigned int n_refinement_cycles=1;
+  std::string exact_expression= "1";
+  std::string rhs_expression= "1";
+
+  std::map<std::string,double> constants;
+
+  std::unique_ptr<FunctionParser<dim>> exact;
+  std::unique_ptr<FunctionParser<dim>> rhs ;
+
+
+
+  ParsedConvergenceTable table;
+
+  /*
+    std::unique_ptr<FunctionParse<2>> rhs;
+    std::unique_ptr<FunctionParse<2>> exact;
+    in file .cc 
+    rhs=std::make_unique<FunctionParse<2>>:(rhs_expression);
+  */
+
+  template<typename Integral>
   friend class PoissonTester;
 };
 
