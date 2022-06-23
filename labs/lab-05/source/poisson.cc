@@ -34,6 +34,9 @@ Poisson<dim>::Poisson()
   add_parameter("Neumann boundary condition expression",
                 neumann_boundary_conditions_expression);
 
+    add_parameter("Exact solution expression",
+                exact_expression);
+
   add_parameter("Dirichlet boundary ids", dirichlet_ids);
   add_parameter("Neumann boundary ids", neumann_ids);
 
@@ -85,7 +88,23 @@ template <int dim>
 void
 Poisson<dim>::refine_grid()
 {
-  triangulation.refine_global(1);
+  // triangulation.refine_global(1);
+  Vector<float> estimated_error_per_cell(triangulation.n_active_cells());
+ 
+  KellyErrorEstimator<dim>::estimate(dof_handler,
+                                     QGauss<dim - 1>(fe->degree + 1),
+                                     {},
+                                     solution,
+                                     estimated_error_per_cell);
+ 
+  GridRefinement::refine_and_coarsen_fixed_number(triangulation,
+                                                  estimated_error_per_cell,
+                                                  0.3,
+                                                  0.03);
+ 
+  triangulation.execute_coarsening_and_refinement();
+
+
 }
 
 
@@ -97,6 +116,13 @@ Poisson<dim>::setup_system()
   if (!fe)
     {
       fe = std::make_unique<FE_Q<dim>>(fe_degree);
+
+      exact_term.initialize(dim == 1 ? "x" :
+                              dim == 2 ? "x,y" :
+                                         "x,y,z",
+                              exact_expression,
+                              constants);
+
       forcing_term.initialize(dim == 1 ? "x" :
                               dim == 2 ? "x,y" :
                                          "x,y,z",
@@ -120,6 +146,8 @@ Poisson<dim>::setup_system()
   dof_handler.distribute_dofs(*fe);
   std::cout << "Number of degrees of freedom: " << dof_handler.n_dofs()
             << std::endl;
+
+
   constraints.clear();
   DoFTools::make_hanging_node_constraints(dof_handler, constraints);
 
@@ -240,15 +268,20 @@ Poisson<dim>::run()
   make_grid();
   for (unsigned int cycle = 0; cycle < n_refinement_cycles; ++cycle)
     {
+      if (cycle == 0){
+        triangulation.refine_global(1);
+      }else{
+        refine_grid();        
+      }
       setup_system();
       assemble_system();
       solve();
       error_table.error_from_exact(dof_handler,
                                    solution,
-                                   dirichlet_boundary_condition);
+                                   exact_term);
       output_results(cycle);
-      if (cycle < n_refinement_cycles - 1)
-        refine_grid();
+
+
     }
   error_table.output_table(std::cout);
 }

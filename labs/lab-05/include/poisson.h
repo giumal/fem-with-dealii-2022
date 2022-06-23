@@ -37,6 +37,9 @@
 #include <deal.II/grid/grid_generator.h>
 #include <deal.II/grid/tria.h>
 
+#include <deal.II/grid/grid_refinement.h>
+#include <deal.II/numerics/error_estimator.h>
+
 #include <deal.II/lac/affine_constraints.h>
 #include <deal.II/lac/dynamic_sparsity_pattern.h>
 #include <deal.II/lac/full_matrix.h>
@@ -95,6 +98,7 @@ protected:
   Vector<double>             solution;
   Vector<double>             system_rhs;
 
+  FunctionParser<dim> exact_term;
   FunctionParser<dim> forcing_term;
   FunctionParser<dim> dirichlet_boundary_condition;
   FunctionParser<dim> neumann_boundary_condition;
@@ -108,6 +112,7 @@ protected:
   std::set<types::boundary_id> dirichlet_ids = {0};
   std::set<types::boundary_id> neumann_ids;
 
+  std::string                   exact_expression                  = "1";
   std::string                   forcing_term_expression                  = "1";
   std::string                   dirichlet_boundary_conditions_expression = "0";
   std::string                   neumann_boundary_conditions_expression   = "0";

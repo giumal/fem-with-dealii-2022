@@ -72,6 +72,8 @@
         "thread": "cpp",
         "cinttypes": "cpp",
         "typeindex": "cpp",
-        "__node_handle": "cpp"
+        "__node_handle": "cpp",
+        "strstream": "cpp",
+        "cfenv": "cpp"
     }
 }
